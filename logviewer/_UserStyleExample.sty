@@ -1,0 +1,51 @@
+
+//==========================================================================================================================================
+// Comments can be written behind double slash
+// 
+// Style rules
+//  - a "style"-file must have file-extension ".sty"
+//  - you define your own style by name-value-pairs: name : value
+//  - the 15 names below are actually supported
+//  - if a name is not defined (commented out or line deleted) -> default-value of Generic Log Viewer is used
+// 
+// MainFont = font which must be installed on PC 
+// 
+// All ...Color values can be defined by
+//  -  color-names (see https://docs.microsoft.com/en-us/dotnet/api/system.windows.media.colors?view=net-5.0&viewFallbackFrom=net-4.8)
+//  -  hex-values  (see https://www.w3schools.com/colors/colors_hexadecimal.asp)
+//
+// Special are the ...PlotArea... colors: you can define the background color(s) of the curves with
+//  - a single (solid) color: DiagramPlotAreaBackgroundSolidColor
+//  - a pair of colors with a color gradient: DiagramPlotAreaBackgroundMultiColorTop & DiagramPlotAreaBackgroundMultiColorBottom
+// if pair is defined -> pair is used (higher priority as single color). E.g. the default values of Generic Log Viewer are
+//  - DiagramPlotAreaBackgroundMultiColorTop:    White
+//  - DiagramPlotAreaBackgroundMultiColorBottom: #CBCBCB
+// you can try color which are close together (like default) or complete different colors (like example below)
+//
+//==========================================================================================================================================
+//
+// Style can be actived by 
+//  - drag & drop of style-file into a running Generic Log Viewer
+//  - defining a style-file as a command-line-argument
+//
+//==========================================================================================================================================
+
+MainFont: Consolas                         // the font for main window (not recommended, except font has same "size" as default font)
+MainFontColor: White                       // color of main font
+MainBackgroundColor: LightSkyBlue          // background color of "not diagram area" 
+
+DiagramAxisAreaBackgroundColor: Gray       // background color in diagram area where axis are
+DiagramAxisAreaFontColor:       Lime       // font color of diagram axis descriptions
+DiagramGritLineColor:           Orange     // color of grid lines
+
+// DiagramPlotAreaBackgroundSolidColor:       Blue     // define a single (solid) color area of the curves OR
+DiagramPlotAreaBackgroundMultiColorTop:    Yellow   // define a pair of colors with a color gradient
+DiagramPlotAreaBackgroundMultiColorBottom: Green    // between these two colors
+
+DiagramStrokeThicknessNormalMode: 4        // thickness of the lines in diagrams in pixels (Normal mode)
+DiagramStrokeThicknessSimpleMode: 2        // thickness of the lines in diagrams in pixels (Simple mode)
+
+File1Color:  #FF00FF                       // = Magenta in hexadecimal value
+File2Color:  #00FFFF                       // = Cyan    in hexadecimal value
+File3Color:  #FFFFFF                       // = White   in hexadecimal value
+MarkerColor: Maroon

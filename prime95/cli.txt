@@ -1,0 +1,9 @@
+-c Contact the PrimeNet server, then exit.
+-d Print detailed information to stdout.
+-h Print this.
+-m Menu to configure mprime.
+-s Display status.
+-t Run the torture test.
+-v Print the version number.
+-aN Use an alternate set of INI and output files (obsolete).
+-wDIR Run from a different working directory.
