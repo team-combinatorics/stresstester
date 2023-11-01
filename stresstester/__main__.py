@@ -8,7 +8,7 @@ from typing import Optional, Callable
 from .base import Trail, TrailResult
 from ..furmark import Furmark
 
-class StressTesterWindow(tk.Tk):
+class StressTesterApp:
     def __init__(self):
         self._loop = asyncio.get_event_loop()
         self._task_queue = []
@@ -76,11 +76,9 @@ class StressTesterWindow(tk.Tk):
         self._loop.create_task(self.run_loop())
         self._loop.run_forever()
         # enter mainloop
-        self.mainloop()
 
 
     def quit(self) -> None:
-        
         # do not accept new tasks
         self._task_running = False
         # terminate all running trails
@@ -90,8 +88,6 @@ class StressTesterWindow(tk.Tk):
         self._loop.run_until_complete(asyncio.gather(*_terminate_tasks))
         # stop the loop
         self._loop.stop()
-
-        return super().quit()
 
     def _on_button_click(self):
         self.submit_trail(Furmark())
