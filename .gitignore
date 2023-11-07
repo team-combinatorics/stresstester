@@ -9,6 +9,7 @@ venv/
 
 # log
 log*.txt
+meta*.ini
 
 # dist
 dist/

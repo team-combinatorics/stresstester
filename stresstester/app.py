@@ -1,6 +1,4 @@
 import asyncio
-import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
 import logging
 from typing import Optional, Callable, Iterable
 import subprocess
@@ -8,7 +6,10 @@ import os
 import traceback
 import threading
 import zipfile
+from configparser import ConfigParser
 
+import tkinter as tk
+from tkinter import ttk, messagebox, scrolledtext
 from ttkthemes import ThemedTk
 
 from .base import Trail, TrailResult
@@ -79,6 +80,7 @@ class StressTesterApp:
 
         self._model = "未知型号"
         self.path = os.path.dirname(__file__)
+        self._datetime_now_str = datetime_now_str()
 
         # self._config_path = config_path or os.path.join(self._path, "config.ini")
         #
@@ -178,7 +180,7 @@ class StressTesterApp:
         _name = "[{name}]{model}@{date}.zip".format(
             name=replace_unsafe_filename_chars(self._inst_name.get()),
             model=replace_unsafe_filename_chars(self._model),
-            date=datetime_now_str()
+            date=self._datetime_now_str
         )
 
         path = os.path.join(os.getcwd(), _name)
@@ -188,9 +190,40 @@ class StressTesterApp:
                 zf.write(f, os.path.join(k, os.path.basename(f)))
         if hasattr(self, "_log_path"):
             zf.write(self._log_path, os.path.basename(self._log_path))
+        # generate meta file
+        _meta = self.generate_meta()
+        zf.write(_meta, os.path.basename(_meta))
         zf.close()
 
         return path
+    
+    def generate_meta(self) -> str:
+        _name = f"meta@{self._datetime_now_str}.ini"
+        path = os.path.join(self.path, _name)
+        cf = ConfigParser()
+        cf.set("DEFAULT", "name", self._inst_name.get())
+        cf.set("DEFAULT", "model", self._model)
+        cf.set("DEFAULT", "date", self._datetime_now_str)
+        cf.set("DEFAULT", "stress", str(self._stress.get()))
+        cf.set("DEFAULT", "stress_cpu", str(self._stress_cpu.get()))
+        cf.set("DEFAULT", "stress_gpu", str(self._stress_gpu.get()))
+        cf.set("DEFAULT", "stress_minutes", str(self._stress_minutes.get()))
+        cf.set("DEFAULT", "cooldown", str(self._cooldown.get()))
+        cf.set("DEFAULT", "cooldown_minutes", str(self._cooldown_minutes.get()))
+
+        for k, v in self._trail_results.items():
+            cf.add_section(k)
+            if v.string:
+                cf.set(k, "string", v.string)
+            cf.set(k, "files", ",".join(k + '/' + os.path.basename(f) for f in v.files))
+            cf.set(k, "start_time", str(v.start_timestamp))
+            cf.set(k, "end_time", str(v.complete_timestamp))
+
+        with open(path, "w") as f:
+            cf.write(f)
+
+        return path
+
 
     def open_file(self, path: str):
         # open the location of a file with windows explorer
@@ -222,7 +255,7 @@ class StressTesterApp:
         self._log.pack(side="bottom", fill="both", expand=True)
 
         # Configure the logging module to use the custom handler
-        self._log_path = os.path.join(os.path.dirname(__file__), f"log@{datetime_now_str()}.txt")
+        self._log_path = os.path.join(os.path.dirname(__file__), f"log@{self._datetime_now_str}.txt")
         logging.basicConfig(filename=self._log_path,
                             level=logging.INFO,
                             format='%(asctime)s - %(levelname)s - %(message)s')
