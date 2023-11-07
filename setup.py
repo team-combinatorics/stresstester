@@ -6,7 +6,7 @@ __version__ = "2023.11"
 __current_dir__ = os.path.dirname(os.path.realpath(__file__))
 
 build_exe_options = {
-    "include_files": ["stresstester"],
+    # "include_files": ["stresstester"],
     "packages": ["stresstester"],
     "include_msvcr": True,
     "optimize": 2,
@@ -20,7 +20,7 @@ setup(
     executables=[Executable("entrypoint.py", target_name="电脑小队系统测试工具.exe", base="Win32GUI", uac_admin=True, icon=os.path.join(__current_dir__, "stresstester", "icon.ico"))],
 )
 
-if os.path.exists(os.path.join(__current_dir__, "dist", "stresstester")):
+if os.path.exists(os.path.join(__current_dir__, "dist")):
     # create a zip file
     import zipfile
     zf = zipfile.ZipFile(os.path.join(__current_dir__, f"{__name__}v{__version__}.zip"), "w", zipfile.ZIP_DEFLATED)
