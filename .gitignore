@@ -1,3 +1,15 @@
 # Python
 *.py[cod]
 __pycache__/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# log
+log*.txt
+
+# dist
+dist/
+*.zip

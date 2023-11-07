@@ -1,2 +1,4 @@
 psutil
 pyautogui
+ttkthemes
+cx_freeze

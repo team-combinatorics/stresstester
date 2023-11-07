@@ -1,0 +1,22 @@
+Automatically create a hardware-snapshot report file:
+-r   Create Text Report File
+-c   Create Comma-delimited Report File (CSV)
+-x   Create XML Report File
+-h   Create HTML Report File
+-m   Create MHTML Report File
+Additional report parameters:
+-utf8  Use UTF-8 encoding (otherwise ANSI per current locale)
+{comp_name} as filename can be used as substitution for computer name
+
+Sensor logging:
+-l   Automatically start sensors with logging. Following additional arguments are possible:
+-log_delay=n    Start automatic logging with a delay of n seconds
+-max_time=n     Stop automatic logging after n seconds
+-poll_rate=n    Polling period in milliseconds
+-log_format=n   Specify log file format n:
+                default (no argument): Value name in header; "sensor name" and "value name" at end
+                1 = Single concatenated header with "sensor name|value name"
+
+PresentMon:
+-pm_proc_name=     Specify process name to be monitored
+-pm_proc_ex=       Specify list of process names to be excluded separated by |

@@ -36,30 +36,19 @@ class Trail:
         """Parse the output of the trail to a python object."""
         return None
 
-    def gbk_file_to_utf8(self, filename: str):
-        """Convert a file from GBK to UTF-8."""
-        with open(filename, 'rb') as f:
-            content = f.read()
-        try:
-            content = content.decode('gbk')
-        except UnicodeDecodeError:
-            logging.warning(f"File {filename} is not GBK encoded")
-            return
-        with open(filename, 'wb') as f:
-            f.write(content.encode('utf-8'))
-
     async def exec(
         self, cmd: str, timeout: Optional[float] = None, 
         *args, **kwargs
     ):
         """Run the trail."""
-        logging.info(f"Running {cmd.format(path=self.path, *args, **kwargs)} in {self.path}, timeout={timeout}")
         self._process = await asyncio.create_subprocess_shell(
             cmd.format(path=self.path, *args, **kwargs),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=self.path,
         )
+
+        logging.info(f"{cmd.format(path=self.path, *args, **kwargs)} (cwd={self.path}, timeout={timeout}, pid={self._process.pid})")
 
         _time_start = time.time()
         
@@ -88,9 +77,9 @@ class Trail:
             else:
                 logging.warning(f"File {fullpath} was not generated")
 
-        # convert files to utf-8
-        for f in files:
-            self.gbk_file_to_utf8(f)
+        # # convert files to utf-8
+        # for f in files:
+        #     self.gbk_file_to_utf8(f)
         
         return TrailResult(
             start_timestamp=_time_start,
@@ -100,18 +89,20 @@ class Trail:
             value=value,
         )
 
-
     async def terminate(self):
         """Terminate the trail."""
         if not self._process:
             return
         # terminate all child processes
-        parent = psutil.Process(self._process.pid)
-        for child in parent.children(): 
-            child.terminate()
-        self._process.terminate()
-        await self._process.wait()
-
+        try:
+            parent = psutil.Process(self._process.pid)
+            for child in parent.children():
+                child.terminate()
+            self._process.terminate()
+            await self._process.wait()
+        except psutil.NoSuchProcess as e:
+            print(f"Trail {self.path} may have already terminated")
+            print(e)
     
     async def run(
         self, *args, **kwargs

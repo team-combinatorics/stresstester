@@ -1,0 +1,7 @@
+/stext <Filename>	Save the battery information into a regular text file.
+/stab <Filename>	Save the battery information into a tab-delimited text file.
+/scomma <Filename>	Save the battery information into a comma-delimited text file.
+/stabular <Filename>	Save the battery information into a tabular text file.
+/shtml <Filename>	Save the battery information into HTML file (Horizontal).
+/sverhtml <Filename>	Save the battery information into HTML file (Vertical).
+/sxml <Filename>	Save the battery information to XML file.
