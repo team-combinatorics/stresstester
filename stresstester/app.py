@@ -405,7 +405,8 @@ class StressTesterApp:
         )
 
     def run_trails(self):
-        if self._get_stress_sec() + self._get_cooldown_sec() == 0:
+        if self._get_stress_sec() + self._get_cooldown_sec() == 0 \
+                or not (self._stress_cpu.get() or self._stress_gpu.get()):
             messagebox.showerror("错误", "请至少选择一个测试项目")
             return
 
@@ -426,15 +427,17 @@ class StressTesterApp:
         )
 
         if self._stress.get():
-            self.submit_trail(
-                Furmark(),
-                resolve=self._on_success,
-                reject=self._on_error,
-                timeout=self._get_stress_sec(),
-            )
-            self.submit_trail(
-                Prime95(),
-                resolve=self._on_success,
-                reject=self._on_error,
-                timeout=self._get_stress_sec(),
-            )
+            if self._stress_cpu.get():
+                self.submit_trail(
+                    Prime95(),
+                    resolve=self._on_success,
+                    reject=self._on_error,
+                    timeout=self._get_stress_sec(),
+                )
+            if self._stress_gpu.get():
+                self.submit_trail(
+                    Furmark(),
+                    resolve=self._on_success,
+                    reject=self._on_error,
+                    timeout=self._get_stress_sec(),
+                )

@@ -1,9 +1,9 @@
 from cx_Freeze import setup, Executable
 import os
 
-__current_dir__ = os.path.dirname(os.path.realpath(__file__))
 __name__ = "电脑小队系统测试工具"
-__version__ = "0.0.1"
+__version__ = "2023.11"
+__current_dir__ = os.path.dirname(os.path.realpath(__file__))
 
 build_exe_options = {
     "include_files": ["stresstester"],
