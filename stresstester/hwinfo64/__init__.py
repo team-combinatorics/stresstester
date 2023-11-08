@@ -32,12 +32,12 @@ class HwInfo64(Trail):
 
     def _press_f5(self):
         try:
-            logging.info("Pressing F5 with vbs")
-            subprocess.check_call(f'CScript.exe "{os.path.join(self.path, "hotkey.vbs")}"', timeout=1)
-        except Exception as e:
-            logging.warning(f"Failed to press hotkey: {e}")
             logging.info("Pressing F5 with pyautogui")
             pyautogui.press('f5')
+        except Exception as e:
+            logging.warning(f"Failed to press hotkey: {e}")
+            logging.info("Pressing F5 with vbs")
+            subprocess.check_call(f'CScript.exe "{os.path.join(self.path, "hotkey.vbs")}"', timeout=1)
 
     def _after(self):
         """Press F5"""
@@ -80,9 +80,7 @@ class HwInfo64(Trail):
 
     def _terminate_sync(self):
         try:
-            if not hasattr(self, "_process_sync"):
-                return
-            # # terminate all child processes
+            # terminate all child processes
             parent = psutil.Process(self._process_sync.pid)
             for child in parent.children():
                 child.terminate()
@@ -92,12 +90,19 @@ class HwInfo64(Trail):
             print(e)
 
     async def terminate(self):
-        loop = asyncio.get_running_loop()
-        fut = loop.run_in_executor(None, self._terminate_sync)
+        ## Don't execute in executor
+        # loop = asyncio.get_running_loop()
+        # fut = loop.run_in_executor(None, self._terminate_sync)
+        # try:
+        #     await asyncio.wait_for(fut, timeout=5)
+        # except asyncio.TimeoutError:
+        #     print(f"Failed to terminate {self._process_sync.pid} after 5 seconds")
+
         try:
-            await asyncio.wait_for(fut, timeout=5)
-        except asyncio.TimeoutError:
-            print(f"Failed to terminate {self._process_sync.pid} after 5 seconds")
+            self._terminate_sync()
+        except Exception as e:
+            print(f"Failed to terminate {self._process_sync.pid}")
+            print(e)
 
     async def run(self, timeout: int = 30):
         loop = asyncio.get_running_loop()
