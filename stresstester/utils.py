@@ -21,3 +21,7 @@ def pick_latest_file(files: Iterable[str]):
         files,
         key=os.path.getctime
     )
+
+
+def normalize_trail_name(t):
+    return t.__class__.__name__.lower()

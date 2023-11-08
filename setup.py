@@ -1,16 +1,26 @@
 from cx_Freeze import setup, Executable
 import os
+import configparser
+from datetime import datetime
 
-__name__ = "电脑小队系统测试工具"
-__version__ = "2023.11"
 __current_dir__ = os.path.dirname(os.path.realpath(__file__))
 
 build_exe_options = {
     "packages": ["stresstester"],
+    "include_files": ["config.ini", "config_en.ini"],
     "include_msvcr": True,
     "optimize": 2,
     "build_exe": os.path.join(__current_dir__, "dist"),
 }
+
+# parse config
+conf = configparser.ConfigParser()
+conf.read(os.path.join(__current_dir__, "config.ini"))
+
+__name__ = conf["global"]["title"]
+__version__ = conf["global"]["version"].format(
+    date=datetime.now().strftime("%y%m%d"),
+)
 
 setup(
     name=__name__,

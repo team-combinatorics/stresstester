@@ -2,7 +2,6 @@ import asyncio
 import logging
 from typing import Optional, Callable, Iterable
 import subprocess
-import os
 import traceback
 import threading
 import zipfile
@@ -21,9 +20,6 @@ from .lshw import LSHW
 from .batteryinfoview import BatteryInfo
 from .utils import *
 
-
-def normalize_trail_name(t: Trail):
-    return t.__class__.__name__.lower()
 
 class TextHandler(logging.Handler):
     # This class allows you to log to a Tkinter Text or ScrolledText widget
@@ -52,7 +48,7 @@ class TextHandler(logging.Handler):
 class StressTesterApp:
     def __init__(
             self,
-            # config_path: Optional[str] = None
+            config_path: Optional[str] = None
     ):
         # init task loop
         self._loop = asyncio.get_event_loop()
@@ -70,26 +66,25 @@ class StressTesterApp:
         self.window = ThemedTk(theme="arc")
         self.window.withdraw()
 
-        self._inst_name = tk.StringVar(value="")
-        self._stress = tk.BooleanVar(value=True)
-        self._stress_cpu = tk.BooleanVar(value=True)
-        self._stress_gpu = tk.BooleanVar(value=True)
-        self._stress_minutes = tk.IntVar(value=20)
-        self._cooldown = tk.BooleanVar(value=True)
-        self._cooldown_minutes = tk.IntVar(value=10)
-
-        self._model = "未知型号"
-        self.path = os.path.dirname(__file__)
         self._datetime_now_str = datetime_now_str()
 
-        # self._config_path = config_path or os.path.join(self._path, "config.ini")
-        #
-        # if os.path.exists(self._config_path):
-        #     self._config = ConfigParser()
-        #     self._config.read(self._config_path)
-        #     self._model = self._config.get("DEFAULT", "model", fallback=None)
-        # else:
-        #     raise FileNotFoundError(f"Config file {self._config_path} not found")
+        self.path = os.path.dirname(__file__)
+
+        self._config = ConfigParser()
+        self._config_path = config_path or os.path.join(os.getcwd(), "../config.ini")
+        if os.path.exists(self._config_path):
+            self._config.read(self._config_path)
+            self._model = self._config.get("global", "model", fallback="未知型号")
+        else:
+            raise FileNotFoundError(f"Config file {self._config_path} not found")
+
+        self._inst_name = tk.StringVar(value=self._config.get("main_window", "inst_name", fallback=""))
+        self._stress = tk.BooleanVar(value=is_str_truthful(self._config.get("main_window", "stress", fallback="True")))
+        self._stress_cpu = tk.BooleanVar(value=is_str_truthful(self._config.get("main_window", "stress_cpu", fallback="True")))
+        self._stress_gpu = tk.BooleanVar(value=is_str_truthful(self._config.get("main_window", "stress_gpu", fallback="True")))
+        self._stress_minutes = tk.IntVar(value=self._config.getint("main_window", "stress_minutes", fallback=10))
+        self._cooldown = tk.BooleanVar(value=is_str_truthful(self._config.get("main_window", "cooldown", fallback="True")))
+        self._cooldown_minutes = tk.IntVar(value=self._config.getint("main_window", "cooldown_minutes", fallback=5))
 
         self.setup_input_window()
         self.setup_main_window()
@@ -113,7 +108,7 @@ class StressTesterApp:
             return
         self._progress["maximum"] = seconds
         for i in range(seconds):
-            self._progress["value"] = i+1
+            self._progress["value"] = i + 1
             await asyncio.sleep(1)
 
     def submit_trail(
@@ -144,7 +139,7 @@ class StressTesterApp:
                 self._trail_results[normalize_trail_name(t)] = res
 
             except Exception as e:
-                logging.error(f"{normalize_trail_name(t)} 出错: ")
+                logging.error(f"ERR [{normalize_trail_name(t)}] 出错")
                 # print stacktrace
                 logging.error(e, exc_info=True)
                 # move trail from running to finished
@@ -172,9 +167,9 @@ class StressTesterApp:
             # stop the mainloop
             self._loop.stop()
             if self.input_window is not None:
-                self.input_window.quit()
+                self.input_window.destroy()
             if self.window is not None:
-                self.window.quit()
+                self.window.destroy()
 
     def create_zip(self) -> str:
         _name = "[{name}]{model}@{date}.zip".format(
@@ -196,7 +191,7 @@ class StressTesterApp:
         zf.close()
 
         return path
-    
+
     def generate_meta(self) -> str:
         _name = f"meta@{self._datetime_now_str}.ini"
         path = os.path.join(self.path, _name)
@@ -224,7 +219,6 @@ class StressTesterApp:
 
         return path
 
-
     def open_file(self, path: str):
         # open the location of a file with windows explorer
         subprocess.Popen(f'explorer /select,"{path}"')
@@ -245,12 +239,13 @@ class StressTesterApp:
         self.run_diag()
 
     def setup_main_window(self):
-        self.window.title("电脑小队系统测试工具")
+        _config = self._config["main_window"]
+        self.window.title(_config.get("title", "电脑小队系统测试工具"))
         self.window.protocol("WM_DELETE_WINDOW", self.quit)
-        self.window.iconbitmap(os.path.join(os.path.dirname(__file__), "icon.ico"))
+        self.window.iconbitmap(os.path.join(self.path, _config.get("icon", "icon.ico")))
 
         # create a multi-line text box for logging
-        self._log = scrolledtext.ScrolledText(self.window, width=50, height=10)
+        self._log = scrolledtext.ScrolledText(self.window, width=60, height=10)
         self._log.configure(state="disabled", foreground="black")
         self._log.pack(side="bottom", fill="both", expand=True)
 
@@ -275,7 +270,7 @@ class StressTesterApp:
         _l.rowconfigure(1, minsize=10)
 
         # create a checkbox for stress test
-        _stress_check = ttk.Checkbutton(_l, text="烤机", variable=self._stress)
+        _stress_check = ttk.Checkbutton(_l, text=_config.get("label_stress", "烤机"), variable=self._stress)
         _stress_check.grid(column=0, row=0, sticky="w")
 
         # create two checkboxes for CPU and GPU stress, disabled when stress is not checked
@@ -287,15 +282,17 @@ class StressTesterApp:
 
         # add var track
         self._stress.trace("w",
-                           lambda *args: _stress_gpu_check.configure(state="normal" if self._stress.get() else "disabled"))
+                           lambda *args: _stress_gpu_check.configure(
+                               state="normal" if self._stress.get() else "disabled"))
         self._stress.trace("w",
-                           lambda *args: _stress_cpu_check.configure(state="normal" if self._stress.get() else "disabled"))
+                           lambda *args: _stress_cpu_check.configure(
+                               state="normal" if self._stress.get() else "disabled"))
 
         # create a label and a spinbox for stress minutes
         _stress_minutes_spinbox = ttk.Spinbox(_l, from_=1, to=60, width=5, textvariable=self._stress_minutes)
         _stress_minutes_spinbox.grid(column=2, row=0, sticky="w")
 
-        _stress_minutes_label = ttk.Label(_l, text="分钟")
+        _stress_minutes_label = ttk.Label(_l, text=_config.get("label_min", "分钟"))
         _stress_minutes_label.grid(column=4, row=0, sticky="w")
 
         _r = ttk.Frame(self.window)
@@ -304,26 +301,27 @@ class StressTesterApp:
         _r.columnconfigure(3, minsize=10)
         _r.rowconfigure(1, minsize=10)
 
-        _cooldown_check = ttk.Checkbutton(_r, text="冷却", variable=self._cooldown)
+        _cooldown_check = ttk.Checkbutton(_r, text=_config.get("label_cooldown", "冷却"), variable=self._cooldown)
         _cooldown_check.grid(column=0, row=0, sticky="w")
 
         _cooldown_minutes_spinbox = ttk.Spinbox(_r, from_=1, to=60, width=5, textvariable=self._cooldown_minutes)
         _cooldown_minutes_spinbox.grid(column=2, row=0, sticky="w")
 
-        _cooldown_minutes_label = ttk.Label(_r, text="分钟")
+        _cooldown_minutes_label = ttk.Label(_r, text=_config.get("label_min", "分钟"))
         _cooldown_minutes_label.grid(column=4, row=0, sticky="w")
 
-        self._start_btn = ttk.Button(_r, text="检测中", command=self.run_trails, state="disabled")
+        self._start_btn = ttk.Button(_r, text=_config.get("label_testing", "检测中"), command=self.run_trails, state="disabled")
         self._start_btn.grid(column=0, row=2, sticky="w", columnspan=5)
 
     def setup_input_window(self):
+        _config = self._config["input_window"]
         self.input_window = tk.Toplevel(
             self.window,
             padx=10,
             pady=10,
         )
-        self.input_window.title("电脑小队系统测试工具")
-        self.input_window.iconbitmap(os.path.join(os.path.dirname(__file__), "icon.ico"))
+        self.input_window.title(_config.get("title", "电脑小队系统测试工具"))
+        self.input_window.iconbitmap(os.path.join(self.path, _config.get("icon", "icon.ico")))
         self.input_window.protocol("WM_DELETE_WINDOW", self.quit)
         self.input_window.rowconfigure(1, minsize=10)
         self.input_window.rowconfigure(3, minsize=10)
@@ -331,17 +329,17 @@ class StressTesterApp:
         self.input_window.columnconfigure(3, minsize=10)
         self.input_window.columnconfigure(5, minsize=10)
 
-        _text = ttk.Label(self.input_window, text="请在下方输入您的姓名或维修单号")
+        _text = ttk.Label(self.input_window, text=_config.get("prompt", "请输入电脑名称"))
         _text.configure(state="disabled", foreground="black")
         _text.grid(column=0, row=0, sticky="w", columnspan=6)
 
-        _label = ttk.Label(self.input_window, text="名称")
+        _label = ttk.Label(self.input_window, text=_config.get("label", "名称"))
         _label.grid(column=0, row=2, sticky="w")
 
         _input = ttk.Entry(self.input_window, width=25, textvariable=self._inst_name)
         _input.grid(column=4, row=2, sticky="w")
 
-        _btn = ttk.Button(self.input_window, text="确认", command=self._on_input_confirm)
+        _btn = ttk.Button(self.input_window, text=_config.get("button", "确认"), command=self._on_input_confirm)
         _btn.grid(column=6, row=2, sticky="w")
 
     def _on_success(self, result: TrailResult):
@@ -360,14 +358,21 @@ class StressTesterApp:
         self.quit()
 
     def _on_hwinfo64_finished(self, result: TrailResult):
+        _config = self._config["on_hwinfo64_finished"]
         # set test btn to normal
         self._start_btn.configure(state="normal")
 
         if not result.files:
-            logging.error("HWInfo64 未能生成报告，请重试")
+            messagebox.showinfo(
+                _config.get("title", "错误"),
+                _config.get("error", "HWInfo64未生成报告，请重试")
+            )
             return
 
-        res = messagebox.askokcancel("提示", "测试完成，是否查看测试结果？(点击HWInfo图标)")
+        res = messagebox.askokcancel(
+            _config.get("title", "提示"),
+            _config.get("prompt", "HWInfo64测试完成，是否查看测试结果？")
+        )
         if res:
             self.submit_trail(
                 LogViewer(),
@@ -379,12 +384,17 @@ class StressTesterApp:
             self._on_trails_finished()
 
     def _on_trails_finished(self):
-        _p = self.create_zip()
-        messagebox.showinfo("提示", f"请将测试结果压缩包上传:\n{_p}")
-        self.open_file(_p)
-
         # set test btn to normal
         self._start_btn.configure(state="normal")
+
+        _config = self._config["on_trails_finished"]
+        _p = self.create_zip()
+        messagebox.showinfo(
+            _config.get("title", "提示"),
+            _config.get("prompt", f"测试完成，报告已保存到：") + '\n' + _p
+        )
+
+        self.open_file(_p)
 
     def run(self) -> None:
         bg_thread = threading.Thread(target=self.run_loop)
@@ -397,24 +407,26 @@ class StressTesterApp:
     def on_lshw_finished(self, result: TrailResult):
         if result.value and '主板' in result.value and result.value['主板']:
             self._model = result.value['主板'][0]
-        logging.info("[>>>] 硬件信息 [<<<]")
+        logging.info("[>>>] HWINFO [<<<]")
         logging.info(result.string)
 
         # enable start button
         self._start_btn.configure(state="normal")
-        self._start_btn.configure(text="开始")
+        self._start_btn.configure(text=self._config["main_window"].get("label_start", "开始测试"))
         self._start_btn.focus()
 
     def on_batteryinfo_finished(self, result: TrailResult):
         if not result.files:
             return
         with open(result.files[0], 'r', encoding='gbk') as f:
-            logging.info("[>>>] 电池信息 [<<<]")
+            logging.info("[>>>] BATTERY [<<<]")
             _text = ''
             for l in f.readlines():
                 _l, _r = l.split(',', 1)
+                # remove ',' in _r
+                _r = _r.replace(',', '')
                 _l, _r = _l.strip(), _r.strip()
-                if not _r or _l == '描述':
+                if not _r or _l == 'Description':
                     continue
                 _text += f"{_l}:	{_r}\n"
             logging.info(_text)
@@ -438,9 +450,13 @@ class StressTesterApp:
         )
 
     def run_trails(self):
+        _config = self._config["main_window"]
         if self._get_stress_sec() + self._get_cooldown_sec() == 0 \
-                or not (self._stress_cpu.get() or self._stress_gpu.get()):
-            messagebox.showerror("错误", "请至少选择一个测试项目")
+                or (self._stress.get() and not (self._stress_cpu.get() or self._stress_gpu.get())):
+            messagebox.showerror(
+                _config.get("title", "错误"),
+                _config.get("error", "请至少选择一项测试项目")
+            )
             return
 
         # disable start btn
@@ -457,6 +473,7 @@ class StressTesterApp:
             resolve=self._on_hwinfo64_finished,
             reject=self._on_error,
             timeout=self._get_stress_sec() + self._get_cooldown_sec(),
+            **(self._config["hwinfo64"] if "hwinfo64" in self._config else {})
         )
 
         if self._stress.get():
@@ -466,6 +483,7 @@ class StressTesterApp:
                     resolve=self._on_success,
                     reject=self._on_error,
                     timeout=self._get_stress_sec(),
+                    **(self._config["prime95"] if "prime95" in self._config else {})
                 )
             if self._stress_gpu.get():
                 self.submit_trail(
@@ -473,4 +491,5 @@ class StressTesterApp:
                     resolve=self._on_success,
                     reject=self._on_error,
                     timeout=self._get_stress_sec(),
+                    **(self._config["furmark"] if "furmark" in self._config else {})
                 )
