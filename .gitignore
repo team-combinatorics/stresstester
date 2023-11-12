@@ -7,10 +7,6 @@ venv/
 .idea/
 .vscode/
 
-# log
-log*.txt
-meta*.ini
-
 # dist
 dist/
 *.zip

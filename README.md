@@ -37,5 +37,10 @@ py entrypoint.py
 在项目根目录下，运行以下命令来打包安装包：
 
 ```bash
+# 清理文件
+py setup.py clean
+# 打包
 py setup.py build
+# 生成压缩包
+py setup.py pack
 ```
