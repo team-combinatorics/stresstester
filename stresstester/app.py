@@ -9,7 +9,7 @@ from configparser import ConfigParser
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
-from ttkthemes import ThemedTk
+# from ttkthemes import ThemedTk
 
 from .base import Trail, TrailResult
 from .furmark import Furmark
@@ -63,7 +63,7 @@ class StressTesterApp:
         self.stress_window: Optional[tk.Toplevel] = None
 
         # tkinter won't init without a root window, so
-        self.window = ThemedTk(theme="arc")
+        self.window = tk.Tk()
         self.window.withdraw()
 
         self._datetime_now_str = datetime_now_str()
@@ -407,7 +407,7 @@ class StressTesterApp:
     def on_lshw_finished(self, result: TrailResult):
         if result.value and '主板' in result.value and result.value['主板']:
             self._model = result.value['主板'][0]
-        logging.info("[>>>] HWINFO [<<<]")
+        logging.info("[>>>] 配置 | HWINFO [<<<]")
         logging.info(result.string)
 
         # enable start button
@@ -416,20 +416,10 @@ class StressTesterApp:
         self._start_btn.focus()
 
     def on_batteryinfo_finished(self, result: TrailResult):
-        if not result.files:
+        if not result.files or not result.string.strip():  # skip if no result
             return
-        with open(result.files[0], 'r', encoding='gbk') as f:
-            logging.info("[>>>] BATTERY [<<<]")
-            _text = ''
-            for l in f.readlines():
-                _l, _r = l.split(',', 1)
-                # remove ',' in _r
-                _r = _r.replace(',', '')
-                _l, _r = _l.strip(), _r.strip()
-                if not _r or _l == 'Description':
-                    continue
-                _text += f"{_l}:	{_r}\n"
-            logging.info(_text)
+        logging.info("[>>>] 电池 | BATTERY [<<<]")
+        logging.info(result.string)
 
     def _get_stress_sec(self):
         return self._stress_minutes.get() * 60 if self._stress.get() else 0
