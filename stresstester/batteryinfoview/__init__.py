@@ -18,7 +18,7 @@ class BatteryInfo(Trail):
                 _l, _r = _l.strip(), _r.strip()
                 if not _r or _l == 'Description':
                     continue
-                _text += f"{_l}:\t{_r}\r\r\n"
+                _text += f"{_l}:\t{_r}\n"
         return _text
 
     async def run(self) -> TrailResult:
