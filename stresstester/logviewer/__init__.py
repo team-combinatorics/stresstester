@@ -13,5 +13,6 @@ class LogViewer(Trail):
         return await self.exec(
             "GenericLogViewer.exe {file} {config}",
             config=os.path.join(self.path, 'default.cfg'),
-            file=' '.join(files),
+            # quote the file path
+            file=' '.join([f'"{f}"' for f in files]),
         )
