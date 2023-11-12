@@ -80,10 +80,13 @@ class StressTesterApp:
 
         self._inst_name = tk.StringVar(value=self._config.get("main_window", "inst_name", fallback=""))
         self._stress = tk.BooleanVar(value=is_str_truthful(self._config.get("main_window", "stress", fallback="True")))
-        self._stress_cpu = tk.BooleanVar(value=is_str_truthful(self._config.get("main_window", "stress_cpu", fallback="True")))
-        self._stress_gpu = tk.BooleanVar(value=is_str_truthful(self._config.get("main_window", "stress_gpu", fallback="True")))
+        self._stress_cpu = tk.BooleanVar(
+            value=is_str_truthful(self._config.get("main_window", "stress_cpu", fallback="True")))
+        self._stress_gpu = tk.BooleanVar(
+            value=is_str_truthful(self._config.get("main_window", "stress_gpu", fallback="True")))
         self._stress_minutes = tk.IntVar(value=self._config.getint("main_window", "stress_minutes", fallback=10))
-        self._cooldown = tk.BooleanVar(value=is_str_truthful(self._config.get("main_window", "cooldown", fallback="True")))
+        self._cooldown = tk.BooleanVar(
+            value=is_str_truthful(self._config.get("main_window", "cooldown", fallback="True")))
         self._cooldown_minutes = tk.IntVar(value=self._config.getint("main_window", "cooldown_minutes", fallback=5))
 
         self.setup_input_window()
@@ -109,6 +112,12 @@ class StressTesterApp:
         self._progress["maximum"] = seconds
         for i in range(seconds):
             self._progress["value"] = i + 1
+            _text_min = str((seconds - i) // 60) + self._config["main_window"].get("label_min", "分")
+            _text_sec = str((seconds - i) % 60) + self._config["main_window"].get("label_sec", "秒")
+            self._start_btn.configure(
+                text=_text_sec + _text_min if (seconds - i) // 60 > 0 else _text_sec,
+            )
+
             await asyncio.sleep(1)
 
     def submit_trail(
@@ -209,7 +218,7 @@ class StressTesterApp:
         for k, v in self._trail_results.items():
             cf.add_section(k)
             if v.string:
-                cf.set(k, "string", v.string)
+                cf.set(k, "string", v.string.replace('%', '٪'))  # has to be escaped
             cf.set(k, "files", ",".join(k + '/' + os.path.basename(f) for f in v.files))
             cf.set(k, "start_time", str(v.start_timestamp))
             cf.set(k, "end_time", str(v.complete_timestamp))
@@ -310,7 +319,8 @@ class StressTesterApp:
         _cooldown_minutes_label = ttk.Label(_r, text=_config.get("label_min", "分钟"))
         _cooldown_minutes_label.grid(column=4, row=0, sticky="w")
 
-        self._start_btn = ttk.Button(_r, text=_config.get("label_testing", "检测中"), command=self.run_trails, state="disabled")
+        self._start_btn = ttk.Button(_r, text=_config.get("label_testing", "检测中"), command=self.run_trails,
+                                     state="disabled")
         self._start_btn.grid(column=0, row=2, sticky="w", columnspan=5)
 
     def setup_input_window(self):
@@ -360,7 +370,7 @@ class StressTesterApp:
     def _on_hwinfo64_finished(self, result: TrailResult):
         _config = self._config["on_hwinfo64_finished"]
         # set test btn to normal
-        self._start_btn.configure(state="normal")
+        self._start_btn.configure(state="normal", text=self._config["main_window"].get("label_start", "开始"))
 
         if not result.files:
             messagebox.showinfo(
