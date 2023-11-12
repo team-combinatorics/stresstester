@@ -25,9 +25,11 @@ __version__ = conf["global"]["version"].format(
     commit=get_latest_commit(),
 )
 
+_static_files = glob(os.path.join(__current_dir__, "static", "*"))
+
 build_exe_options = {
     "packages": ["stresstester"],
-    "include_files": ["config.ini", "config_en.ini"],
+    "include_files": ["config.ini", "config_en.ini", *_static_files],
     "include_msvcr": True,
     "optimize": 2,
     "build_exe": os.path.join(__current_dir__, "dist"),
@@ -68,6 +70,25 @@ class Clean(Command):
             print(f"Removed: {f}")
 
 
+def _patch_readme():
+    _readme_path = os.path.join(__current_dir__, "dist", "README读我.txt")
+    if not os.path.exists(_readme_path):
+        return
+
+    try:
+        with open(_readme_path, 'r', encoding='utf-8') as f:
+            _readme = f.read()
+    except UnicodeDecodeError:
+        with open(_readme_path, 'r', encoding='gbk') as f:
+            _readme = f.read()
+    with open(_readme_path, 'w', encoding='gbk') as f:
+        f.write(_readme.format(
+            version=__version__,
+            date=datetime.now().strftime("%Y-%m-%d"),
+            commit=get_latest_commit(),
+        ))
+
+
 class Pack(Command):
     description = "Pack the dist directory into a zip file"
     user_options = []
@@ -79,6 +100,8 @@ class Pack(Command):
         pass
 
     def run(self):
+        _patch_readme()  # a bit late, but it works
+
         if os.path.exists(os.path.join(__current_dir__, "dist")):
             # create a zip file
             import zipfile
