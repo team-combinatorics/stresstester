@@ -6,7 +6,6 @@ class Furmark(Trail):
     def __init__(self):
         super().__init__(
             path=os.path.dirname(__file__),
-            files=('FurMark-Scores.txt',),
         )
 
     async def run(self,
