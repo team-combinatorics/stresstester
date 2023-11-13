@@ -18,7 +18,9 @@ from .prime95 import Prime95
 from .hwinfo64 import HwInfo64
 from .logviewer import LogViewer
 from .lshw import LSHW
-from .batteryinfoview import BatteryInfo
+from .batteryinfo import BatteryInfo
+from .cpuz import CPUZ
+from .aida64 import AIDA64
 from .utils import *
 
 
@@ -49,11 +51,12 @@ class TextHandler(logging.Handler):
 class StressTesterApp:
     def __init__(
             self,
-            config_path: Optional[str] = None
+            config: Optional[ConfigParser] = None,
     ):
         # init task loop
         self._loop = asyncio.get_event_loop()
         self._task_queue = []
+        self._callback_queue = []
         self._task_running = True
         self._pending_trails: dict[str, Trail] = {}
         self._running_trails: dict[str, Trail] = {}
@@ -68,40 +71,49 @@ class StressTesterApp:
         self.window.withdraw()
 
         self._datetime_now_str = datetime_now_str()
-
         self.path = os.path.dirname(__file__)
 
-        self._config = ConfigParser()
-        self._config_path = config_path or os.path.join(os.getcwd(), "../config.ini")
-        if os.path.exists(self._config_path):
-            self._config.read(self._config_path)
-            self._model = self._config.get("global", "model", fallback="未知型号")
+        if config is not None:
+            self._config = config
         else:
-            raise FileNotFoundError(f"Config file {self._config_path} not found")
+            self._config = ConfigParser()
+            _config_path = os.path.join(os.getcwd(), "../config.ini")
+            if os.path.exists(_config_path):
+                self._config.read(_config_path)
+                self._model = self._config.get("global", "model", fallback="未知型号")
+            else:
+                raise FileNotFoundError(f"Config file {_config_path} not found")
 
         self._inst_name = tk.StringVar(value=self._config.get("main_window", "inst_name", fallback=""))
-        self._stress = tk.BooleanVar(value=is_str_truthful(self._config.get("main_window", "stress", fallback="True")))
+        self._cpuz_benchmark = tk.BooleanVar(value=is_str_truthful(self._config.get("stress", "cpuz_benchmark", fallback="True")))
+        self._stress = tk.BooleanVar(value=is_str_truthful(self._config.get("stress", "stress", fallback="True")))
         self._stress_cpu = tk.BooleanVar(
-            value=is_str_truthful(self._config.get("main_window", "stress_cpu", fallback="True")))
+            value=is_str_truthful(self._config.get("stress", "stress_cpu", fallback="True")))
+        self._stress_cpu_backend = tk.StringVar(value=self._config.get("stress", "cpu_backend", fallback="prime95"))
         self._stress_gpu = tk.BooleanVar(
-            value=is_str_truthful(self._config.get("main_window", "stress_gpu", fallback="True")))
-        self._stress_minutes = tk.IntVar(value=self._config.getint("main_window", "stress_minutes", fallback=10))
+            value=is_str_truthful(self._config.get("stress", "stress_gpu", fallback="True")))
+        self._stress_gpu_backend = tk.StringVar(value=self._config.get("stress", "gpu_backend", fallback="furmark"))
+        self._stress_minutes = tk.IntVar(value=self._config.getint("stress", "stress_minutes", fallback=10))
         self._cooldown = tk.BooleanVar(
-            value=is_str_truthful(self._config.get("main_window", "cooldown", fallback="True")))
-        self._cooldown_minutes = tk.IntVar(value=self._config.getint("main_window", "cooldown_minutes", fallback=5))
+            value=is_str_truthful(self._config.get("stress", "cooldown", fallback="True")))
+        self._cooldown_minutes = tk.IntVar(value=self._config.getint("stress", "cooldown_minutes", fallback=5))
 
         self.setup_input_window()
         self.setup_main_window()
 
     def submit_task(self, task):
-        self._task_queue.append(
-            self._loop.create_task(task)
-        )
+        self._task_queue.append(task)
+
+    def submit_callback(self, task):
+        self._callback_queue.append(task)
 
     def run_loop(self, interval: float = 0.05):
         async def run():
             while self._task_running:
                 await asyncio.gather(*self._task_queue)
+                self._task_queue.clear()
+                await asyncio.gather(*self._callback_queue)
+                self._callback_queue.clear()
                 await asyncio.sleep(interval)
 
         self._loop.create_task(run())
@@ -183,12 +195,12 @@ class StressTesterApp:
                 self.window.destroy()
 
         # clean up
-        time.sleep(5)
+        time.sleep(3)
         import psutil
         proc = psutil.Process(os.getpid())
         # terminate all child processes
         for child in proc.children(recursive=True):
-            child.terminate()
+            child.kill()
         os._exit(0)
 
     def create_zip(self) -> str:
@@ -221,7 +233,9 @@ class StressTesterApp:
         cf.set("DEFAULT", "date", self._datetime_now_str)
         cf.set("DEFAULT", "stress", str(self._stress.get()))
         cf.set("DEFAULT", "stress_cpu", str(self._stress_cpu.get()))
+        cf.set("DEFAULT", "cpu_backend", str(self._stress_cpu_backend.get()))
         cf.set("DEFAULT", "stress_gpu", str(self._stress_gpu.get()))
+        cf.set("DEFAULT", "gpu_backend", str(self._stress_gpu_backend.get()))
         cf.set("DEFAULT", "stress_minutes", str(self._stress_minutes.get()))
         cf.set("DEFAULT", "cooldown", str(self._cooldown.get()))
         cf.set("DEFAULT", "cooldown_minutes", str(self._cooldown_minutes.get()))
@@ -295,7 +309,7 @@ class StressTesterApp:
 
         # create two checkboxes for CPU and GPU stress, disabled when stress is not checked
         _stress_gpu_check = ttk.Checkbutton(_l, text="GPU", variable=self._stress_gpu)
-        _stress_gpu_check.grid(column=2, row=2, sticky="w")
+        _stress_gpu_check.grid(column=4, row=2, sticky="w")
 
         _stress_cpu_check = ttk.Checkbutton(_l, text="CPU", variable=self._stress_cpu)
         _stress_cpu_check.grid(column=0, row=2, sticky="w")
@@ -314,6 +328,9 @@ class StressTesterApp:
 
         _stress_minutes_label = ttk.Label(_l, text=_config.get("label_min", "分钟"))
         _stress_minutes_label.grid(column=4, row=0, sticky="w")
+
+        _cpu_options_menu = tk.OptionMenu(_l, self._stress_cpu_backend, "prime95", "aida64")
+        _cpu_options_menu.grid(column=2, row=2, sticky="w")
 
         _r = ttk.Frame(self.window)
         _r.pack(side="right", fill="both", expand=True)
@@ -380,8 +397,6 @@ class StressTesterApp:
 
     def _on_hwinfo64_finished(self, result: TrailResult):
         _config = self._config["on_hwinfo64_finished"]
-        # set test btn to normal
-        self._start_btn.configure(state="normal", text=self._config["main_window"].get("label_start", "开始"))
 
         if not result.files:
             messagebox.showinfo(
@@ -405,9 +420,6 @@ class StressTesterApp:
             self._on_trails_finished()
 
     def _on_trails_finished(self):
-        # set test btn to normal
-        self._start_btn.configure(state="normal", text=self._config["main_window"].get("label_start", "开始"))
-
         _config = self._config["on_trails_finished"]
         _p = self.create_zip()
         messagebox.showinfo(
@@ -425,20 +437,22 @@ class StressTesterApp:
         if self.window is not None:
             self.window.mainloop()
 
-    def on_lshw_finished(self, result: TrailResult):
+    def _on_lshw_finished(self, result: TrailResult):
         if result.value and '主板' in result.value and result.value['主板']:
             self._model = result.value['主板'][0]
         logging.info("[>>>] 配置 | HWINFO [<<<]")
         logging.info(result.string)
 
-        # enable start button
-        self._start_btn.configure(state="normal", text=self._config["main_window"].get("label_start", "开始"))
-        self._start_btn.focus()
-
-    def on_batteryinfo_finished(self, result: TrailResult):
+    def _on_batteryinfo_finished(self, result: TrailResult):
         if not result.files or not result.string.strip():  # skip if no result
             return
         logging.info("[>>>] 电池 | BATTERY [<<<]")
+        logging.info(result.string)
+
+    def _on_cpuz_finished(self, result: TrailResult):
+        if not result.files or not result.string.strip():
+            return
+        logging.info("[>>>] CPU 性能 | CPU Perf [<<<]")
         logging.info(result.string)
 
     def _get_stress_sec(self):
@@ -447,19 +461,34 @@ class StressTesterApp:
     def _get_cooldown_sec(self):
         return self._cooldown_minutes.get() * 60 if self._cooldown.get() else 0
 
+    async def _reset_start_btn(self):
+        # enable start button
+        self._start_btn.configure(state="normal", text=self._config["main_window"].get("label_start", "开始"))
+        self._start_btn.focus()
+
     def run_diag(self):
+        """Run diagnostics on startup"""
         self.submit_trail(
             BatteryInfo(),
-            resolve=self.on_batteryinfo_finished,
+            resolve=self._on_batteryinfo_finished,
             reject=self._on_error,
         )
         self.submit_trail(
             LSHW(),
-            resolve=self.on_lshw_finished,
+            resolve=self._on_lshw_finished,
             reject=self._on_error,
         )
+        if self._cpuz_benchmark.get():
+            self.submit_trail(
+                CPUZ(),
+                resolve=self._on_cpuz_finished,
+                reject=self._on_error,
+            )
+
+        self.submit_callback(self._reset_start_btn())
 
     def run_trails(self):
+        """Run stress and cooldown tests"""
         _config = self._config["main_window"]
         if self._get_stress_sec() + self._get_cooldown_sec() == 0 \
                 or (self._stress.get() and not (self._stress_cpu.get() or self._stress_gpu.get())):
@@ -486,20 +515,44 @@ class StressTesterApp:
             **(self._config["hwinfo64"] if "hwinfo64" in self._config else {})
         )
 
-        if self._stress.get():
-            if self._stress_cpu.get():
-                self.submit_trail(
-                    Prime95(),
-                    resolve=self._on_success,
-                    reject=self._on_error,
-                    timeout=self._get_stress_sec(),
-                    **(self._config["prime95"] if "prime95" in self._config else {})
-                )
-            if self._stress_gpu.get():
-                self.submit_trail(
-                    Furmark(),
-                    resolve=self._on_success,
-                    reject=self._on_error,
-                    timeout=self._get_stress_sec(),
-                    **(self._config["furmark"] if "furmark" in self._config else {})
-                )
+        if not self._stress.get():
+            return
+
+        if self._stress_cpu.get():
+            match self._stress_cpu_backend.get():
+                case "prime95":
+                    self.submit_trail(
+                        Prime95(),
+                        resolve=self._on_success,
+                        reject=self._on_error,
+                        timeout=self._get_stress_sec(),
+                        **(self._config["prime95"] if "prime95" in self._config else {})
+                    )
+                case "aida64":
+                    self.submit_trail(
+                        AIDA64(),
+                        resolve=self._on_success,
+                        reject=self._on_error,
+                        timeout=self._get_stress_sec(),
+                        tests=("FPU",),
+                        **(self._config["aida64"] if "aida64" in self._config else {})
+                    )
+                case _:
+                    raise ValueError(f"Unknown CPU backend {self._stress_cpu_backend.get()}")
+
+        if self._stress_gpu.get():
+            match self._stress_gpu_backend.get():
+                case "furmark":
+                    self.submit_trail(
+                        Furmark(),
+                        resolve=self._on_success,
+                        reject=self._on_error,
+                        timeout=self._get_stress_sec(),
+                        **(self._config["furmark"] if "furmark" in self._config else {})
+                    )
+                case "aida64":
+                    raise NotImplementedError("AIDA64 GPU stress is not implemented yet")
+                case _:
+                    raise ValueError(f"Unknown GPU backend {self._stress_gpu_backend.get()}")
+
+        self.submit_callback(self._reset_start_btn())

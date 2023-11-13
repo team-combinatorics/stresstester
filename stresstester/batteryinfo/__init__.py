@@ -23,10 +23,11 @@ class BatteryInfo(Trail):
 
     async def run(self) -> TrailResult:
         r = await self.exec(
-            "batteryinfoview.exe /scomma battery.csv"
+            "BatteryInfoView.exe /scomma battery.csv"
         )
+        _csv_path = os.path.join(self.path, 'battery.csv')
         return TrailResult(
-            string=self.csv_to_str(os.path.join(self.path, 'battery.csv')),
+            string=self.csv_to_str(_csv_path) if os.path.exists(_csv_path) else None,
             value=None,
             files=r.files,
             start_timestamp=r.start_timestamp,

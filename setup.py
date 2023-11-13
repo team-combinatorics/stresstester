@@ -1,4 +1,4 @@
-from cx_Freeze import setup, Executable
+import logging
 import os
 import configparser
 from datetime import datetime
@@ -6,11 +6,15 @@ from setuptools import Command
 import shutil
 from glob import glob
 
+from cx_Freeze import setup, Executable
+
+
 def get_latest_commit(n=7):
     import subprocess
     try:
         return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()[:n]
-    except:
+    except Exception as e:
+        logging.exception(e)
         return "unknown"
 
 
@@ -24,12 +28,14 @@ __version__ = conf["global"]["version"].format(
     date=datetime.now().strftime("%y%m%d"),
     commit=get_latest_commit(),
 )
+__author__ = conf["global"]["author"]
 
 _static_files = glob(os.path.join(__current_dir__, "static", "*"))
+_config_files = glob(os.path.join(__current_dir__, "*.ini"))
 
 build_exe_options = {
     "packages": ["stresstester"],
-    "include_files": ["config.ini", "config_en.ini", *_static_files],
+    "include_files": _static_files + _config_files,
     "include_msvcr": True,
     "optimize": 2,
     "build_exe": os.path.join(__current_dir__, "dist"),
@@ -71,7 +77,7 @@ class Clean(Command):
 
 
 def _patch_readme():
-    _readme_path = os.path.join(__current_dir__, "dist", "README读我.txt")
+    _readme_path = os.path.join(__current_dir__, "dist", "请先读我README.txt")
     if not os.path.exists(_readme_path):
         return
 
@@ -119,13 +125,14 @@ class Pack(Command):
 setup(
     name=__name__,
     version=__version__,
+    author=__author__,
     options={"build_exe": build_exe_options},
     executables=[Executable(
         "entrypoint.py",
-        target_name="电脑小队系统测试工具.exe",
+        target_name=__name__ + ".exe",
         base="Win32GUI",
         uac_admin=True,
-        icon=os.path.join(__current_dir__, "stresstester", "icon.ico")
+        icon=os.path.join(__current_dir__, "stresstester", conf["global"]["icon"]),
     )],
     cmdclass={
         'clean': Clean,

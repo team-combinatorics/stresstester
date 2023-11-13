@@ -62,10 +62,14 @@ class Trail:
             self._stdout, self._stderr = b'', b''
 
         # get the output
-        out_str = self._stdout.decode('gbk') + self._stderr.decode('gbk')
+        out_str = self._stdout.decode('gbk', errors='ignore') + self._stderr.decode('gbk', errors='ignore')
+
+        if self._process.returncode != 0:
+            logging.warning(f"Trail {self.path} returned {self._process.returncode}")
+            logging.warning(out_str)
         
         # parse the output
-        value = self.out_to_value(self._stdout.decode('gbk'))
+        value = self.out_to_value(self._stdout.decode('gbk', errors='ignore'))
 
         # check if files were generated
         files = []

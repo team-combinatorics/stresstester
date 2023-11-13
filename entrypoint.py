@@ -1,4 +1,7 @@
+from configparser import ConfigParser
+
 from stresstester import StressTesterApp
+
 
 def get_locale_windows():
     import locale
@@ -19,8 +22,9 @@ def use_english():
     except:
         return False
 
+
 if __name__ == '__main__':
-    app = StressTesterApp(
-        config_path="config_en.ini" if use_english() else "config.ini"
-    )
+    _conf = ConfigParser()
+    _conf.read(['config.ini', 'text_en.ini' if use_english() else 'text.ini'])
+    app = StressTesterApp(_conf)
     app.run()

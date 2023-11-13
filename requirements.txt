@@ -1,3 +1,4 @@
 psutil
 pyautogui
 cx_freeze
+msl-loadlib
