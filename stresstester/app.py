@@ -406,7 +406,7 @@ class StressTesterApp:
 
     def _on_trails_finished(self):
         # set test btn to normal
-        self._start_btn.configure(state="normal")
+        self._start_btn.configure(state="normal", text=self._config["main_window"].get("label_start", "开始"))
 
         _config = self._config["on_trails_finished"]
         _p = self.create_zip()
@@ -432,8 +432,7 @@ class StressTesterApp:
         logging.info(result.string)
 
         # enable start button
-        self._start_btn.configure(state="normal")
-        self._start_btn.configure(text=self._config["main_window"].get("label_start", "开始测试"))
+        self._start_btn.configure(state="normal", text=self._config["main_window"].get("label_start", "开始"))
         self._start_btn.focus()
 
     def on_batteryinfo_finished(self, result: TrailResult):
