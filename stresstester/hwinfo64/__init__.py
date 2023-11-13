@@ -34,6 +34,8 @@ class HwInfo64(Trail):
         try:
             logging.info("Pressing F5 with pyautogui")
             pyautogui.press('f5')
+            time.sleep(.5)
+            assert glob.glob(os.path.join(self.path, '*.csv')), "Logs were not generated"
         except Exception as e:
             logging.warning(f"Failed to press hotkey: {e}")
             logging.info("Pressing F5 with vbs")
