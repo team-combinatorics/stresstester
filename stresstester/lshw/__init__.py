@@ -13,6 +13,8 @@ class LSHW(Trail):
         """
         Parses the output of 硬件检测引擎.exe and returns a dict.
         """
+        # remove content after last \n
+        s = s[:s.rfind('\n')]
         lines = s.splitlines()
         r = {}
         k, v = 'ERR', 'ERR'
@@ -27,9 +29,9 @@ class LSHW(Trail):
         return r
     
     async def run(self):
-        for _to_check in ("硬件检测引擎.exe", "data", "硬件检测引擎.dll"):
+        for _to_check in ("lshw.exe", "data", "lshw.dll"):
             if not os.path.exists(os.path.join(self.path, _to_check)):
                 raise FileNotFoundError(f"{os.path.join(self.path, _to_check)} not found")
 
-        return await self.exec("硬件检测引擎.exe")
+        return await self.exec("lshw.exe")
     
