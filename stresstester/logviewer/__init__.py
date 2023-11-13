@@ -12,7 +12,7 @@ class LogViewer(Trail):
     async def run(self, files: tuple[str, ...] = ()):
         return await self.exec(
             "GenericLogViewer.exe {file} {config}",
-            config=os.path.join(self.path, 'default.cfg'),
+            config='"' + os.path.join(self.path, 'default.cfg') + '"',
             # quote the file path
             file=' '.join([f'"{f}"' for f in files]),
         )

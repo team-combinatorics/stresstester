@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from typing import Optional, Callable, Iterable
 import subprocess
 import traceback
@@ -115,7 +116,7 @@ class StressTesterApp:
             _text_min = str((seconds - i) // 60) + self._config["main_window"].get("label_min", "分")
             _text_sec = str((seconds - i) % 60) + self._config["main_window"].get("label_sec", "秒")
             self._start_btn.configure(
-                text=_text_sec + _text_min if (seconds - i) // 60 > 0 else _text_sec,
+                text=_text_min + _text_sec if (seconds - i) // 60 > 0 else _text_sec,
             )
 
             await asyncio.sleep(1)
@@ -170,6 +171,7 @@ class StressTesterApp:
                 print(f"Terminating {normalize_trail_name(t)}")
                 self._loop.create_task(t.terminate())
             asyncio.gather(*self._task_queue)
+            print("Hit Ctrl+C to exit")
         except Exception as e:
             print(e)
         finally:
@@ -179,6 +181,15 @@ class StressTesterApp:
                 self.input_window.destroy()
             if self.window is not None:
                 self.window.destroy()
+
+        # clean up
+        time.sleep(5)
+        import psutil
+        proc = psutil.Process(os.getpid())
+        # terminate all child processes
+        for child in proc.children(recursive=True):
+            child.terminate()
+        os._exit(0)
 
     def create_zip(self) -> str:
         _name = "[{name}]{model}@{date}.zip".format(
@@ -218,7 +229,7 @@ class StressTesterApp:
         for k, v in self._trail_results.items():
             cf.add_section(k)
             if v.string:
-                cf.set(k, "string", v.string.replace('%', '٪'))  # has to be escaped
+                cf.set(k, "string", v.string.replace('%', '%%'))  # has to be escaped
             cf.set(k, "files", ",".join(k + '/' + os.path.basename(f) for f in v.files))
             cf.set(k, "start_time", str(v.start_timestamp))
             cf.set(k, "end_time", str(v.complete_timestamp))
