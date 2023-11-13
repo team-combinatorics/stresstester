@@ -416,6 +416,8 @@ class StressTesterApp:
                 resolve=lambda *args: self._on_trails_finished(),
                 files=(pick_latest_file(result.files),)
             )
+            asyncio.gather(*self._task_queue)
+            self._task_queue.clear()
         else:
             self._on_trails_finished()
 
